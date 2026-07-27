@@ -200,7 +200,7 @@ export default function Home() {
     setSlots((prev) => prev.map((s) => (s.time === selectedTime ? { ...s, available: false } : s)));
     setStep(5);
 
-    // Guaranteed Persistent fetch with keepalive & CORS headers
+    // Dual-dispatch (Relative + Absolute) to guarantee delivery across all WebApp origins
     try {
       const payload = JSON.stringify({
         booking: newBooking,
@@ -208,12 +208,19 @@ export default function Home() {
         clientTelegramId,
       });
 
-      fetch("https://02-beauty-booking-bot-seven.vercel.app/api/notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payload,
-        keepalive: true,
-      }).catch((err) => console.error("Fetch notify err:", err));
+      const dispatch = (url: string) => {
+        try {
+          fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+            keepalive: true,
+          }).catch(() => {});
+        } catch (e) {}
+      };
+
+      dispatch("/api/notify");
+      dispatch("https://02-beauty-booking-bot-seven.vercel.app/api/notify");
     } catch (e) {
       console.error("Failed to send telegram notification:", e);
     }
@@ -550,7 +557,7 @@ export default function Home() {
               onClick={() => {
                 if (step < 4) {
                   triggerHaptic("medium");
-                  setStep((s) => s - 1);
+                  setStep((s) => s + 1);
                 } else {
                   handleConfirmBooking();
                 }
