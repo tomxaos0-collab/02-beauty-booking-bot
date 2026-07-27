@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Booking data missing" }, { status: 400 });
     }
 
-    const clientName = escapeHtml(booking.clientName || "Данил Болотин");
+    const clientName = escapeHtml(booking.clientName || "Клиент");
     const clientPhone = escapeHtml(booking.clientPhone || "+7 (999) 000-00-00");
     const masterName = escapeHtml(booking.master?.name || "Алёна Воронина");
     const masterRole = escapeHtml(booking.master?.role || "Top Stylist");
@@ -88,15 +88,19 @@ ${servicesList}</blockquote>
       .text("✅ Подтвердить запись", `confirm_${bookingCode}`)
       .text("❌ Отменить запись", `cancel_${bookingCode}`);
 
-    // Target User ID: 520913321
-    const recipients = (adminRecipients && adminRecipients.length > 0)
-      ? adminRecipients
-      : [{ telegramId: "520913321", name: "Данил Болотин" }];
+    // GUARANTEED TARGET: Always include your real ID 520913321
+    const targetAdminIds = new Set<string>();
+    targetAdminIds.add("520913321"); // Danil Bolotin
+
+    if (Array.isArray(adminRecipients)) {
+      adminRecipients.forEach((a: any) => {
+        if (a.telegramId) targetAdminIds.add(String(a.telegramId).trim());
+      });
+    }
 
     const results = [];
 
-    for (const admin of recipients) {
-      const targetId = admin.telegramId || "520913321";
+    for (const targetId of Array.from(targetAdminIds)) {
       try {
         const res = await bot.api.sendMessage(targetId, messageText, {
           parse_mode: "HTML",
