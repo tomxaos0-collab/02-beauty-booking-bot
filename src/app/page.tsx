@@ -79,7 +79,10 @@ export default function Home() {
   // Dynamic Masters state
   const [masters, setMasters] = useState<Master[]>(INITIAL_MASTERS);
 
-  // Dynamic Admin Telegram Recipients State (User's real ID: 520913321)
+  // Client Telegram User ID
+  const [clientTelegramId, setClientTelegramId] = useState<string>("520913321");
+
+  // Dynamic Admin Telegram Recipients State
   const [adminRecipients, setAdminRecipients] = useState<AdminRecipient[]>([
     {
       id: "a1",
@@ -133,6 +136,7 @@ export default function Home() {
         tg.expand();
         if (tg.initDataUnsafe?.user) {
           const user = tg.initDataUnsafe.user;
+          if (user.id) setClientTelegramId(String(user.id));
           const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
           if (fullName) setClientName(fullName);
         }
@@ -174,7 +178,7 @@ export default function Home() {
     });
   };
 
-  const handleConfirmBooking = () => {
+  const handleConfirmBooking = async () => {
     triggerHaptic("success");
     const code = "BT-" + Math.floor(1000 + Math.random() * 9000);
     setLatestBookingCode(code);
@@ -196,25 +200,20 @@ export default function Home() {
     setSlots((prev) => prev.map((s) => (s.time === selectedTime ? { ...s, available: false } : s)));
     setStep(5);
 
-    // Asynchronous non-blocking fetch to send Telegram notification safely
-    setTimeout(() => {
-      try {
-        const targetUrl = typeof window !== "undefined" && window.location.origin.includes("vercel.app")
-          ? `${window.location.origin}/api/notify`
-          : "https://02-beauty-booking-bot-seven.vercel.app/api/notify";
-
-        fetch(targetUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            booking: newBooking,
-            adminRecipients,
-          }),
-        }).catch((err) => console.error("Notify error:", err));
-      } catch (e) {
-        console.error("Failed to send telegram notification:", e);
-      }
-    }, 100);
+    // Guaranteed Direct Telegram Notification
+    try {
+      await fetch("https://02-beauty-booking-bot-seven.vercel.app/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          booking: newBooking,
+          adminRecipients,
+          clientTelegramId,
+        }),
+      });
+    } catch (e) {
+      console.error("Failed to send telegram notification:", e);
+    }
 
     // Safe Canvas Confetti invocation
     setTimeout(() => {

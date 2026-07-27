@@ -19,7 +19,6 @@ async function ensureWebhookSet() {
   }
 }
 
-// Helper to escape HTML characters for Telegram HTML parse_mode
 function escapeHtml(text: string): string {
   if (!text) return "";
   return text
@@ -33,7 +32,7 @@ export async function POST(request: Request) {
     await ensureWebhookSet();
 
     const body = await request.json();
-    const { booking, adminRecipients } = body;
+    const { booking, adminRecipients, clientTelegramId } = body;
 
     if (!booking) {
       return NextResponse.json({ error: "Booking data missing" }, { status: 400 });
@@ -54,8 +53,8 @@ export async function POST(request: Request) {
       ?.map((s: any) => `• <b>${escapeHtml(s.name)}</b> — <code>${s.price.toLocaleString("ru-RU")} ₽</code>`)
       .join("\n") || "• <b>Комплексный маникюр + покрытие</b> — <code>2 500 ₽</code>";
 
-    // Professional Native Telegram Formatting using <blockquote>, <code>, and <b>
-    const messageText = `
+    // 1. ADMIN NOTIFICATION MESSAGE
+    const adminMessageText = `
 ⚡️ <b>AURA BEAUTY | НОВАЯ ЗАПИСЬ № <code>#${bookingCode}</code></b>
 
 <blockquote>📅 <b>ДАТА И ВРЕМЯ</b>
@@ -77,20 +76,35 @@ ${servicesList}</blockquote>
 <i>Статус: 🟡 Ожидает подтверждения студией</i>
     `.trim();
 
-    // Clean Share URL that opens Telegram sharing / text prepopulated
     const shareText = encodeURIComponent(`Здравствуйте, ${booking.clientName}! По поводу вашей записи #${booking.code} в AURA BEAUTY...`);
     const shareUrl = `https://t.me/share/url?url=https://t.me/port_beauty_bot&text=${shareText}`;
 
-    // Inline Keyboard Action Buttons
-    const keyboard = new InlineKeyboard()
+    const adminKeyboard = new InlineKeyboard()
       .url("💬 Отправить сообщение клиенту", shareUrl)
       .row()
       .text("✅ Подтвердить запись", `confirm_${bookingCode}`)
       .text("❌ Отменить запись", `cancel_${bookingCode}`);
 
-    // GUARANTEED TARGET: Always include your real ID 520913321
+    // 2. CLIENT NOTIFICATION MESSAGE
+    const clientMessageText = `
+🌸 <b>ВЫ УСПЕШНО ЗАПИСАНЫ В AURA BEAUTY!</b>
+
+<blockquote>🎟 <b>ВАШ БИЛЕТ № <code>#${bookingCode}</code></b>
+📅 Дата: <b>${dateStr}</b> в <b>${timeStr}</b>
+💅 Мастер: <b>${masterName}</b>
+📍 Салон: <b>${locationName}</b> (${locationAddress})</blockquote>
+
+<blockquote>✂️ <b>УСЛУГИ:</b>
+${servicesList}</blockquote>
+
+💳 <b>СУММА К ОПЛАТЕ В САЛОНЕ: <code>${booking.totalPrice?.toLocaleString("ru-RU")} ₽</code></b>
+
+<i>Ждем вас за великолепным уходом! Если вы захотите перенести или отменить запись — нажмите кнопку «Мои записи» в меню приложения.</i>
+    `.trim();
+
+    // Target Admin IDs (Always includes 520913321)
     const targetAdminIds = new Set<string>();
-    targetAdminIds.add("520913321"); // Danil Bolotin
+    targetAdminIds.add("520913321"); // Danil
 
     if (Array.isArray(adminRecipients)) {
       adminRecipients.forEach((a: any) => {
@@ -100,17 +114,35 @@ ${servicesList}</blockquote>
 
     const results = [];
 
+    // Send Admin Notifications
     for (const targetId of Array.from(targetAdminIds)) {
       try {
-        const res = await bot.api.sendMessage(targetId, messageText, {
+        const res = await bot.api.sendMessage(targetId, adminMessageText, {
           parse_mode: "HTML",
-          reply_markup: keyboard,
+          reply_markup: adminKeyboard,
         });
-        results.push({ telegramId: targetId, status: "sent", messageId: res.message_id });
+        results.push({ role: "admin", telegramId: targetId, status: "sent", messageId: res.message_id });
       } catch (err: any) {
-        console.error(`Failed to send message to ${targetId}:`, err);
-        results.push({ telegramId: targetId, status: "error", error: err.message });
+        console.error(`Failed to send admin message to ${targetId}:`, err);
+        results.push({ role: "admin", telegramId: targetId, status: "error", error: err.message });
       }
+    }
+
+    // Send Client Confirmation Message if clientTelegramId is available
+    if (clientTelegramId && String(clientTelegramId) !== "520913321") {
+      try {
+        const res = await bot.api.sendMessage(clientTelegramId, clientMessageText, {
+          parse_mode: "HTML",
+        });
+        results.push({ role: "client", telegramId: clientTelegramId, status: "sent", messageId: res.message_id });
+      } catch (err: any) {
+        console.error(`Failed to send client confirmation to ${clientTelegramId}:`, err);
+      }
+    } else if (String(clientTelegramId) === "520913321") {
+      // If user is testing as client and admin simultaneously, send the client confirmation card too
+      try {
+        await bot.api.sendMessage("520913321", clientMessageText, { parse_mode: "HTML" });
+      } catch (e) {}
     }
 
     return NextResponse.json({ success: true, results });
