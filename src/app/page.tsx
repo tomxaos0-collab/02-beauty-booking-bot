@@ -178,6 +178,46 @@ export default function Home() {
     });
   };
 
+  const sendNotificationPayload = (bookingObj: ActiveBooking) => {
+    try {
+      const payload = JSON.stringify({
+        booking: bookingObj,
+        adminRecipients,
+        clientTelegramId,
+      });
+
+      const primaryUrl = "https://02-beauty-booking-bot-seven.vercel.app/api/notify";
+
+      // 1. Try sendBeacon first (un-cancellable by webview navigation)
+      if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+        try {
+          const blob = new Blob([payload], { type: "application/json" });
+          navigator.sendBeacon(primaryUrl, blob);
+          navigator.sendBeacon("/api/notify", blob);
+        } catch (e) {}
+      }
+
+      // 2. Fallback to standard fetch
+      try {
+        fetch(primaryUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          keepalive: true,
+        }).catch(() => {});
+
+        fetch("/api/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          keepalive: true,
+        }).catch(() => {});
+      } catch (e) {}
+    } catch (e) {
+      console.error("sendNotificationPayload error:", e);
+    }
+  };
+
   const handleConfirmBooking = () => {
     triggerHaptic("success");
     const code = "BT-" + Math.floor(1000 + Math.random() * 9000);
@@ -200,30 +240,8 @@ export default function Home() {
     setSlots((prev) => prev.map((s) => (s.time === selectedTime ? { ...s, available: false } : s)));
     setStep(5);
 
-    // Guaranteed Dual-dispatch (Relative + Absolute) to deliver notifications
-    try {
-      const payload = JSON.stringify({
-        booking: newBooking,
-        adminRecipients,
-        clientTelegramId,
-      });
-
-      const dispatch = (url: string) => {
-        try {
-          fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: payload,
-            keepalive: true,
-          }).catch(() => {});
-        } catch (e) {}
-      };
-
-      dispatch("/api/notify");
-      dispatch("https://02-beauty-booking-bot-seven.vercel.app/api/notify");
-    } catch (e) {
-      console.error("Failed to send telegram notification:", e);
-    }
+    // Trigger multi-layer notification dispatch
+    sendNotificationPayload(newBooking);
 
     // Safe Canvas Confetti invocation
     setTimeout(() => {
