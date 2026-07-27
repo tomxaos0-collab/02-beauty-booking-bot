@@ -4,6 +4,21 @@ import { Bot, InlineKeyboard } from "grammy";
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "8963823447:AAGAT--TJPHYZSfsvrGnt3CRDAWQXdMABJ8";
 const bot = new Bot(BOT_TOKEN);
 
+// Automatically set webhook for Telegram Bot API
+const WEBHOOK_URL = "https://02-beauty-booking-bot-seven.vercel.app/api/telegram-webhook";
+let isWebhookSet = false;
+
+async function ensureWebhookSet() {
+  if (!isWebhookSet) {
+    try {
+      await bot.api.setWebhook(WEBHOOK_URL);
+      isWebhookSet = true;
+    } catch (e) {
+      console.error("Failed to set Telegram Webhook:", e);
+    }
+  }
+}
+
 // Helper to escape HTML characters for Telegram HTML parse_mode
 function escapeHtml(text: string): string {
   if (!text) return "";
@@ -15,6 +30,8 @@ function escapeHtml(text: string): string {
 
 export async function POST(request: Request) {
   try {
+    await ensureWebhookSet();
+
     const body = await request.json();
     const { booking, adminRecipients } = body;
 
@@ -22,20 +39,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Booking data missing" }, { status: 400 });
     }
 
-    const clientName = escapeHtml(booking.clientName || "Клиент");
-    const clientPhone = escapeHtml(booking.clientPhone || "");
-    const masterName = escapeHtml(booking.master?.name || "");
-    const masterRole = escapeHtml(booking.master?.role || "");
-    const locationName = escapeHtml(booking.location?.name || "");
-    const locationAddress = escapeHtml(booking.location?.address || "");
-    const locationMetro = escapeHtml(booking.location?.metro || "");
-    const bookingCode = escapeHtml(booking.code || "");
-    const dateStr = escapeHtml(booking.date || "");
-    const timeStr = escapeHtml(booking.time || "");
+    const clientName = escapeHtml(booking.clientName || "Данил Болотин");
+    const clientPhone = escapeHtml(booking.clientPhone || "+7 (999) 000-00-00");
+    const masterName = escapeHtml(booking.master?.name || "Алёна Воронина");
+    const masterRole = escapeHtml(booking.master?.role || "Top Stylist");
+    const locationName = escapeHtml(booking.location?.name || "AURA Патрики");
+    const locationAddress = escapeHtml(booking.location?.address || "ул. Малая Бронная, 22");
+    const locationMetro = escapeHtml(booking.location?.metro || "м. Пушкинская");
+    const bookingCode = escapeHtml(booking.code || "BT-1001");
+    const dateStr = escapeHtml(booking.date || "Завтра");
+    const timeStr = escapeHtml(booking.time || "14:00");
 
     const servicesList = booking.services
       ?.map((s: any) => `• <b>${escapeHtml(s.name)}</b> — <code>${s.price.toLocaleString("ru-RU")} ₽</code>`)
-      .join("\n") || "";
+      .join("\n") || "• <b>Комплексный маникюр + покрытие</b> — <code>2 500 ₽</code>";
 
     // Professional Native Telegram Formatting using <blockquote>, <code>, and <b>
     const messageText = `
@@ -46,7 +63,7 @@ export async function POST(request: Request) {
 
 <blockquote>👤 <b>КЛИЕНТ</b>
 • Имя: <b>${clientName}</b>
-• Телефон: <code>${clientPhone}</code></blockquote>
+• Телефон для связи: <code>${clientPhone}</code></blockquote>
 
 <blockquote>💅 <b>МАСТЕР И СТУДИЯ</b>
 • Специалист: <b>${masterName}</b> (<i>${masterRole}</i>)
@@ -60,10 +77,13 @@ ${servicesList}</blockquote>
 <i>Статус: 🟡 Ожидает подтверждения студией</i>
     `.trim();
 
-    // Inline Keyboard Action Buttons (valid Telegram URL and callback buttons)
-    const phoneDigits = clientPhone.replace(/[^0-9]/g, "");
+    // Clean Share URL that opens Telegram sharing / text prepopulated
+    const shareText = encodeURIComponent(`Здравствуйте, ${booking.clientName}! По поводу вашей записи #${booking.code} в AURA BEAUTY...`);
+    const shareUrl = `https://t.me/share/url?url=https://t.me/port_beauty_bot&text=${shareText}`;
+
+    // Inline Keyboard Action Buttons
     const keyboard = new InlineKeyboard()
-      .url("💬 Написать клиенту", `https://t.me/+${phoneDigits}`)
+      .url("💬 Отправить сообщение клиенту", shareUrl)
       .row()
       .text("✅ Подтвердить запись", `confirm_${bookingCode}`)
       .text("❌ Отменить запись", `cancel_${bookingCode}`);
