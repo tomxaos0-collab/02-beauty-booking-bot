@@ -188,7 +188,14 @@ export default function Home() {
 
       const primaryUrl = "https://02-beauty-booking-bot-seven.vercel.app/api/notify";
 
-      // 1. Try sendBeacon first (un-cancellable by webview navigation)
+      // Telegram Native WebApp sendData method
+      if (typeof window !== "undefined" && (window as any).Telegram?.WebApp?.sendData) {
+        try {
+          (window as any).Telegram.WebApp.sendData(payload);
+        } catch (e) {}
+      }
+
+      // Try sendBeacon
       if (typeof navigator !== "undefined" && navigator.sendBeacon) {
         try {
           const blob = new Blob([payload], { type: "application/json" });
@@ -197,7 +204,7 @@ export default function Home() {
         } catch (e) {}
       }
 
-      // 2. Fallback to standard fetch
+      // Fallback to fetch
       try {
         fetch(primaryUrl, {
           method: "POST",
