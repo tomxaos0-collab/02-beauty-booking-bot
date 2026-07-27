@@ -6,6 +6,7 @@ const bot = new Bot(BOT_TOKEN);
 
 // Helper to escape HTML characters for Telegram HTML parse_mode
 function escapeHtml(text: string): string {
+  if (!text) return "";
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
 
     // Professional Native Telegram Formatting using <blockquote>, <code>, and <b>
     const messageText = `
-<b>⚡️ AURA BEAUTY | НОВАЯ ЗАПИСЬ № <code>${bookingCode}</code></b>
+⚡️ <b>AURA BEAUTY | НОВАЯ ЗАПИСЬ № <code>#${bookingCode}</code></b>
 
 <blockquote>📅 <b>ДАТА И ВРЕМЯ</b>
 <b>${dateStr}</b> в <b>${timeStr}</b></blockquote>
@@ -59,10 +60,10 @@ ${servicesList}</blockquote>
 <i>Статус: 🟡 Ожидает подтверждения студией</i>
     `.trim();
 
-    // Inline Keyboard Action Buttons
-    const phoneClean = clientPhone.replace(/[^0-9+]/g, "");
+    // Inline Keyboard Action Buttons (valid Telegram URL and callback buttons)
+    const phoneDigits = clientPhone.replace(/[^0-9]/g, "");
     const keyboard = new InlineKeyboard()
-      .url("📞 Позвонить клиенту", `tel:${phoneClean}`)
+      .url("💬 Написать клиенту", `https://t.me/+${phoneDigits}`)
       .row()
       .text("✅ Подтвердить запись", `confirm_${bookingCode}`)
       .text("❌ Отменить запись", `cancel_${bookingCode}`);
