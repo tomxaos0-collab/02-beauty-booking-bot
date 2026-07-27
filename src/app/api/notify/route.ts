@@ -25,7 +25,6 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// Handle Browser CORS preflight OPTIONS request
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
@@ -99,7 +98,7 @@ ${servicesList}</blockquote>
       .text("✅ Подтвердить запись", `confirm_${bookingCode}`)
       .text("❌ Отменить запись", `cancel_${bookingCode}`);
 
-    // 2. CLIENT NOTIFICATION MESSAGE
+    // 2. CLIENT CONFIRMATION MESSAGE
     const clientMessageText = `
 🌸 <b>ВЫ УСПЕШНО ЗАПИСАНЫ В AURA BEAUTY!</b>
 
@@ -116,9 +115,9 @@ ${servicesList}</blockquote>
 <i>Ждем вас за великолепным уходом! Если вы захотите перенести или отменить запись — нажмите кнопку «Мои записи» в меню приложения.</i>
     `.trim();
 
-    // Target Admin IDs (Always includes 520913321)
+    // Target Admin IDs (Always includes Danil 520913321)
     const targetAdminIds = new Set<string>();
-    targetAdminIds.add("520913321"); // Danil
+    targetAdminIds.add("520913321");
 
     if (Array.isArray(adminRecipients)) {
       adminRecipients.forEach((a: any) => {
@@ -142,20 +141,17 @@ ${servicesList}</blockquote>
       }
     }
 
-    // Send Client Confirmation Message if clientTelegramId is available
-    if (clientTelegramId && String(clientTelegramId) !== "520913321") {
+    // ALWAYS send Client Confirmation Message to whoever opened the Mini App (automatic user ID)
+    if (clientTelegramId) {
+      const targetClientId = String(clientTelegramId).trim();
       try {
-        const res = await bot.api.sendMessage(clientTelegramId, clientMessageText, {
+        const res = await bot.api.sendMessage(targetClientId, clientMessageText, {
           parse_mode: "HTML",
         });
-        results.push({ role: "client", telegramId: clientTelegramId, status: "sent", messageId: res.message_id });
+        results.push({ role: "client", telegramId: targetClientId, status: "sent", messageId: res.message_id });
       } catch (err: any) {
-        console.error(`Failed to send client confirmation to ${clientTelegramId}:`, err);
+        console.error(`Failed to send client confirmation to ${targetClientId}:`, err);
       }
-    } else if (String(clientTelegramId) === "520913321") {
-      try {
-        await bot.api.sendMessage("520913321", clientMessageText, { parse_mode: "HTML" });
-      } catch (e) {}
     }
 
     return NextResponse.json({ success: true, results }, { headers: CORS_HEADERS });
