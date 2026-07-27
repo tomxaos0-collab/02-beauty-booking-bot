@@ -82,7 +82,7 @@ export default function Home() {
   // Client Telegram User ID
   const [clientTelegramId, setClientTelegramId] = useState<string>("520913321");
 
-  // Dynamic Admin Telegram Recipients State
+  // Dynamic Admin Telegram Recipients State (Only Danil's real ID: 520913321)
   const [adminRecipients, setAdminRecipients] = useState<AdminRecipient[]>([
     {
       id: "a1",
@@ -127,35 +127,39 @@ export default function Home() {
   // Slots state
   const [slots, setSlots] = useState(TIME_SLOTS);
 
-  // Telegram SDK Init: Automatically populate current user's real Telegram ID into Admin list!
+  // Clear stale browser storage on mount & init Telegram SDK
   useEffect(() => {
     try {
-      if (typeof window !== "undefined" && (window as any).Telegram?.WebApp) {
-        const tg = (window as any).Telegram.WebApp;
-        tg.ready();
-        tg.expand();
-        if (tg.initDataUnsafe?.user) {
-          const user = tg.initDataUnsafe.user;
-          if (user.id) {
-            const realUserTgId = String(user.id);
-            setClientTelegramId(realUserTgId);
+      if (typeof window !== "undefined") {
+        // Clear any old cached admin state from previous sessions
+        try {
+          window.localStorage.removeItem("adminRecipients");
+          window.localStorage.removeItem("beauty_admin_recipients");
+        } catch (e) {}
 
-            // Dynamically auto-inject real Telegram ID into admin list
-            setAdminRecipients((prev) => {
-              if (prev.some((a) => a.telegramId === realUserTgId)) return prev;
-              return [
+        if ((window as any).Telegram?.WebApp) {
+          const tg = (window as any).Telegram.WebApp;
+          tg.ready();
+          tg.expand();
+          if (tg.initDataUnsafe?.user) {
+            const user = tg.initDataUnsafe.user;
+            if (user.id) {
+              const realUserTgId = String(user.id);
+              setClientTelegramId(realUserTgId);
+
+              // Force set admin recipient list to strictly contain the real ID
+              setAdminRecipients([
                 {
                   id: "admin_auto_" + realUserTgId,
                   telegramId: realUserTgId,
-                  name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Администратор Telegram",
+                  name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Данил Болотин (Управляющий)",
                   active: true,
                 },
-                ...prev,
-              ];
-            });
+              ]);
+            }
+            const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
+            if (fullName) setClientName(fullName);
           }
-          const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
-          if (fullName) setClientName(fullName);
         }
       }
     } catch (e) {
