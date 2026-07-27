@@ -200,7 +200,7 @@ export default function Home() {
     setSlots((prev) => prev.map((s) => (s.time === selectedTime ? { ...s, available: false } : s)));
     setStep(5);
 
-    // Dual-dispatch (Relative + Absolute) to guarantee delivery across all WebApp origins
+    // Guaranteed Dual-dispatch (Relative + Absolute) to deliver notifications
     try {
       const payload = JSON.stringify({
         booking: newBooking,
