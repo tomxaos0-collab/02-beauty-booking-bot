@@ -82,12 +82,18 @@ export default function Home() {
   // Client Telegram User ID
   const [clientTelegramId, setClientTelegramId] = useState<string>("520913321");
 
-  // Dynamic Admin Telegram Recipients State: STRICTLY Danil's Real Telegram ID 520913321
+  // Dynamic Admin Telegram Recipients State: Default both 520913321 & 849201948
   const [adminRecipients, setAdminRecipients] = useState<AdminRecipient[]>([
     {
       id: "a1",
       telegramId: "520913321",
-      name: "Данил Болотин (Управляющий)",
+      name: "Данил Болотин (Главный Управляющий)",
+      active: true,
+    },
+    {
+      id: "a2",
+      telegramId: "849201948",
+      name: "Данил Болотин (Telegram Desktop)",
       active: true,
     },
   ]);
@@ -127,7 +133,7 @@ export default function Home() {
   // Slots state
   const [slots, setSlots] = useState(TIME_SLOTS);
 
-  // Init Telegram SDK cleanly without overwriting adminRecipients
+  // Init Telegram SDK
   useEffect(() => {
     try {
       if (typeof window !== "undefined" && (window as any).Telegram?.WebApp) {
@@ -287,7 +293,7 @@ export default function Home() {
 
   const handleAddMaster = (newMaster: Master) => {
     triggerHaptic("success");
-    setMasters((prev) => [...prev, newMaster]);
+    setMasters((prev) => [newMaster, ...prev]);
   };
 
   // Admin Actions for Locations & Brand Name
