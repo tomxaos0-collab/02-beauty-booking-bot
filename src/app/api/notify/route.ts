@@ -4,6 +4,14 @@ import { Bot, InlineKeyboard } from "grammy";
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "8963823447:AAGAT--TJPHYZSfsvrGnt3CRDAWQXdMABJ8";
 const bot = new Bot(BOT_TOKEN);
 
+// Helper to escape HTML characters for Telegram HTML parse_mode
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -13,42 +21,53 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Booking data missing" }, { status: 400 });
     }
 
-    const servicesFormatted = booking.services
-      ?.map((s: any) => `  💎 <b>${s.name}</b> — <code>${s.price.toLocaleString("ru-RU")} ₽</code>`)
-      .join("\n");
+    const clientName = escapeHtml(booking.clientName || "Клиент");
+    const clientPhone = escapeHtml(booking.clientPhone || "");
+    const masterName = escapeHtml(booking.master?.name || "");
+    const masterRole = escapeHtml(booking.master?.role || "");
+    const locationName = escapeHtml(booking.location?.name || "");
+    const locationAddress = escapeHtml(booking.location?.address || "");
+    const locationMetro = escapeHtml(booking.location?.metro || "");
+    const bookingCode = escapeHtml(booking.code || "");
+    const dateStr = escapeHtml(booking.date || "");
+    const timeStr = escapeHtml(booking.time || "");
 
+    const servicesList = booking.services
+      ?.map((s: any) => `• <b>${escapeHtml(s.name)}</b> — <code>${s.price.toLocaleString("ru-RU")} ₽</code>`)
+      .join("\n") || "";
+
+    // Professional Native Telegram Formatting using <blockquote>, <code>, and <b>
     const messageText = `
-✨ <b>AURA BEAUTY — НОВАЯ ЗАПИСЬ</b> ✨
-━━━━━━━━━━━━━━━━━━━━━━
+<b>⚡️ AURA BEAUTY | НОВАЯ ЗАПИСЬ № <code>${bookingCode}</code></b>
 
-🎟 <b>Номер брони:</b> <code>#${booking.code}</code>
-📅 <b>Дата & Время:</b> <b>${booking.date}</b> в <b>${booking.time}</b>
+<blockquote>📅 <b>ДАТА И ВРЕМЯ</b>
+<b>${dateStr}</b> в <b>${timeStr}</b></blockquote>
 
-👤 <b>КЛИЕНТ</b>
- └ Имя: <b>${booking.clientName}</b>
- └ Тел: <code>${booking.clientPhone}</code>
+<blockquote>👤 <b>КЛИЕНТ</b>
+• Имя: <b>${clientName}</b>
+• Телефон: <code>${clientPhone}</code></blockquote>
 
-💅 <b>МАСТЕР & САЛОН</b>
- └ Специалист: <b>${booking.master?.name}</b> (<i>${booking.master?.role}</i>)
- └ Филиал: <b>${booking.location?.name}</b>
- └ Адрес: <code>${booking.location?.address}</code> (${booking.location?.metro})
+<blockquote>💅 <b>МАСТЕР И СТУДИЯ</b>
+• Специалист: <b>${masterName}</b> (<i>${masterRole}</i>)
+• Салон: <b>${locationName}</b>
+• Адрес: <code>${locationAddress}</code> (${locationMetro})</blockquote>
 
-✂️ <b>ВЫБРАННЫЕ УСЛУГИ</b>
-${servicesFormatted}
+<blockquote>✂️ <b>УСЛУГИ</b>
+${servicesList}</blockquote>
 
-━━━━━━━━━━━━━━━━━━━━━━
-💳 <b>ИТОГО К ОПЛАТЕ:</b> <b>${booking.totalPrice?.toLocaleString("ru-RU")} ₽</b>
-💎 <i>Статус: Бронирование подтверждено</i>
+<b>💳 ИТОГО К ОПЛАТЕ: <code>${booking.totalPrice?.toLocaleString("ru-RU")} ₽</code></b>
+<i>Статус: 🟡 Ожидает подтверждения студией</i>
     `.trim();
 
-    // Luxury Inline Keyboard Actions for Telegram Admins
+    // Inline Keyboard Action Buttons
+    const phoneClean = clientPhone.replace(/[^0-9+]/g, "");
     const keyboard = new InlineKeyboard()
-      .url("📞 Связаться с клиентом", `tel:${booking.clientPhone?.replace(/[^0-9+]/g, "")}`)
+      .url("📞 Позвонить клиенту", `tel:${phoneClean}`)
       .row()
-      .text("❌ Отменить бронь", `cancel_${booking.code}`)
-      .text("✅ Подтвердить визит", `confirm_${booking.code}`);
+      .text("✅ Подтвердить запись", `confirm_${bookingCode}`)
+      .text("❌ Отменить запись", `cancel_${bookingCode}`);
 
-    // Default recipients set to user's real Telegram ID 520913321
+    // Target User ID: 520913321
     const recipients = (adminRecipients && adminRecipients.length > 0)
       ? adminRecipients
       : [{ telegramId: "520913321", name: "Данил Болотин" }];
