@@ -19,6 +19,20 @@ async function ensureWebhookSet() {
   }
 }
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+// Handle Browser CORS preflight OPTIONS request
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS,
+  });
+}
+
 function escapeHtml(text: string): string {
   if (!text) return "";
   return text
@@ -35,7 +49,7 @@ export async function POST(request: Request) {
     const { booking, adminRecipients, clientTelegramId } = body;
 
     if (!booking) {
-      return NextResponse.json({ error: "Booking data missing" }, { status: 400 });
+      return NextResponse.json({ error: "Booking data missing" }, { status: 400, headers: CORS_HEADERS });
     }
 
     const clientName = escapeHtml(booking.clientName || "Клиент");
@@ -139,15 +153,14 @@ ${servicesList}</blockquote>
         console.error(`Failed to send client confirmation to ${clientTelegramId}:`, err);
       }
     } else if (String(clientTelegramId) === "520913321") {
-      // If user is testing as client and admin simultaneously, send the client confirmation card too
       try {
         await bot.api.sendMessage("520913321", clientMessageText, { parse_mode: "HTML" });
       } catch (e) {}
     }
 
-    return NextResponse.json({ success: true, results });
+    return NextResponse.json({ success: true, results }, { headers: CORS_HEADERS });
   } catch (error: any) {
     console.error("Error in notify API:", error);
-    return NextResponse.json({ error: error.message || "Failed to notify" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Failed to notify" }, { status: 500, headers: CORS_HEADERS });
   }
 }

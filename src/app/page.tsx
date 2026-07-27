@@ -178,7 +178,7 @@ export default function Home() {
     });
   };
 
-  const handleConfirmBooking = async () => {
+  const handleConfirmBooking = () => {
     triggerHaptic("success");
     const code = "BT-" + Math.floor(1000 + Math.random() * 9000);
     setLatestBookingCode(code);
@@ -200,17 +200,20 @@ export default function Home() {
     setSlots((prev) => prev.map((s) => (s.time === selectedTime ? { ...s, available: false } : s)));
     setStep(5);
 
-    // Guaranteed Direct Telegram Notification
+    // Guaranteed Persistent fetch with keepalive & CORS headers
     try {
-      await fetch("https://02-beauty-booking-bot-seven.vercel.app/api/notify", {
+      const payload = JSON.stringify({
+        booking: newBooking,
+        adminRecipients,
+        clientTelegramId,
+      });
+
+      fetch("https://02-beauty-booking-bot-seven.vercel.app/api/notify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          booking: newBooking,
-          adminRecipients,
-          clientTelegramId,
-        }),
-      });
+        body: payload,
+        keepalive: true,
+      }).catch((err) => console.error("Fetch notify err:", err));
     } catch (e) {
       console.error("Failed to send telegram notification:", e);
     }
@@ -547,7 +550,7 @@ export default function Home() {
               onClick={() => {
                 if (step < 4) {
                   triggerHaptic("medium");
-                  setStep((s) => s + 1);
+                  setStep((s) => s - 1);
                 } else {
                   handleConfirmBooking();
                 }
