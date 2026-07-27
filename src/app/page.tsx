@@ -202,38 +202,21 @@ export default function Home() {
 
       const primaryUrl = "https://02-beauty-booking-bot-seven.vercel.app/api/notify";
 
-      // Telegram Native WebApp sendData method
-      if (typeof window !== "undefined" && (window as any).Telegram?.WebApp?.sendData) {
-        try {
-          (window as any).Telegram.WebApp.sendData(payload);
-        } catch (e) {}
-      }
+      // 1. Direct async fetch to primary endpoint
+      fetch(primaryUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+        keepalive: true,
+      }).catch((err) => console.error("Fetch notify err:", err));
 
-      // Try sendBeacon
-      if (typeof navigator !== "undefined" && navigator.sendBeacon) {
-        try {
-          const blob = new Blob([payload], { type: "application/json" });
-          navigator.sendBeacon(primaryUrl, blob);
-          navigator.sendBeacon("/api/notify", blob);
-        } catch (e) {}
-      }
-
-      // Fallback to fetch
-      try {
-        fetch(primaryUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: payload,
-          keepalive: true,
-        }).catch(() => {});
-
-        fetch("/api/notify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: payload,
-          keepalive: true,
-        }).catch(() => {});
-      } catch (e) {}
+      // 2. Relative endpoint fallback
+      fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+        keepalive: true,
+      }).catch((err) => console.error("Fetch relative notify err:", err));
     } catch (e) {
       console.error("sendNotificationPayload error:", e);
     }
@@ -261,7 +244,7 @@ export default function Home() {
     setSlots((prev) => prev.map((s) => (s.time === selectedTime ? { ...s, available: false } : s)));
     setStep(5);
 
-    // Trigger multi-layer notification dispatch
+    // Trigger notification dispatch
     sendNotificationPayload(newBooking);
 
     // Safe Canvas Confetti invocation
