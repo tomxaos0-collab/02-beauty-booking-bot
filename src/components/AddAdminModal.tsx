@@ -113,7 +113,7 @@ export default function AddAdminModal({
               <input
                 type="text"
                 required
-                placeholder="Например: 849201948"
+                placeholder="Например: 520913321"
                 value={telegramId}
                 onChange={(e) => setTelegramId(e.target.value)}
                 className="w-full py-3 px-4 rounded-2xl bg-white/[0.04] border border-white/10 text-white text-sm font-bold focus:outline-none focus:border-pink-500/60 focus:bg-white/[0.06] transition-all font-mono"
