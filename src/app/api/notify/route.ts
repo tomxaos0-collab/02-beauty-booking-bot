@@ -115,8 +115,10 @@ ${servicesList}</blockquote>
 <i>Ждем вас за великолепным уходом! Если вы захотите перенести или отменить запись — нажмите кнопку «Мои записи» в меню приложения.</i>
     `.trim();
 
-    // Purely dynamic Target Admin IDs
+    // Guaranteed Admin Target Set (Includes both 520913321 and 849201948)
     const targetAdminIds = new Set<string>();
+    targetAdminIds.add("520913321");
+    targetAdminIds.add("849201948");
 
     if (Array.isArray(adminRecipients) && adminRecipients.length > 0) {
       adminRecipients.forEach((a: any) => {
@@ -124,14 +126,9 @@ ${servicesList}</blockquote>
       });
     }
 
-    // Fallback to environment variable or dynamic client if no admin recipients configured
-    if (targetAdminIds.size === 0 && process.env.ADMIN_TELEGRAM_ID) {
-      targetAdminIds.add(process.env.ADMIN_TELEGRAM_ID);
-    }
-
     const results = [];
 
-    // Send Admin Notifications
+    // Send Admin Notifications to all Target Admin IDs
     for (const targetId of Array.from(targetAdminIds)) {
       try {
         const res = await bot.api.sendMessage(targetId, adminMessageText, {
