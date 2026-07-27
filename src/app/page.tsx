@@ -133,7 +133,7 @@ export default function Home() {
       tg.expand();
       if (tg.initDataUnsafe?.user) {
         const user = tg.initDataUnsafe.user;
-        setClientName(`${user.first_name || ""} ${user.last_name || ""}`.trim() || "Клиент Telegram");
+        setClientName(`${user.first_name || ""} ${user.last_name || ""}`.trim() || "Данил Болотин");
       }
     }
   }, []);
@@ -190,9 +190,13 @@ export default function Home() {
     setSlots((prev) => prev.map((s) => (s.time === selectedTime ? { ...s, available: false } : s)));
     setStep(5);
 
-    // Send Telegram Notification via API route to 520913321
+    // Send Telegram Notification via absolute production API route
     try {
-      fetch("/api/notify", {
+      const targetUrl = typeof window !== "undefined" && window.location.origin.includes("vercel.app")
+        ? `${window.location.origin}/api/notify`
+        : "https://02-beauty-booking-bot-seven.vercel.app/api/notify";
+
+      fetch(targetUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
