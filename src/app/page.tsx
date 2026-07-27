@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, AlertTriangle, Clock } from "lucide-react";
 import { BEAUTY_SERVICES as INITIAL_SERVICES, INITIAL_MASTERS, TIME_SLOTS, LOCATIONS as INITIAL_LOCATIONS } from "@/data/mockData";
 import { ActiveBooking, DayItem, Location, Master, BeautyService, AdminRecipient } from "@/types";
+import { confirmBookingAction } from "@/app/actions/booking";
 
 // Modular Components
 import Header from "@/components/Header";
@@ -192,37 +193,7 @@ export default function Home() {
     });
   };
 
-  const sendNotificationPayload = (bookingObj: ActiveBooking) => {
-    try {
-      const payload = JSON.stringify({
-        booking: bookingObj,
-        adminRecipients,
-        clientTelegramId,
-      });
-
-      const primaryUrl = "https://02-beauty-booking-bot-seven.vercel.app/api/notify";
-
-      // 1. Direct async fetch to primary endpoint
-      fetch(primaryUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payload,
-        keepalive: true,
-      }).catch((err) => console.error("Fetch notify err:", err));
-
-      // 2. Relative endpoint fallback
-      fetch("/api/notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payload,
-        keepalive: true,
-      }).catch((err) => console.error("Fetch relative notify err:", err));
-    } catch (e) {
-      console.error("sendNotificationPayload error:", e);
-    }
-  };
-
-  const handleConfirmBooking = () => {
+  const handleConfirmBooking = async () => {
     triggerHaptic("success");
     const code = "BT-" + Math.floor(1000 + Math.random() * 9000);
     setLatestBookingCode(code);
@@ -244,8 +215,12 @@ export default function Home() {
     setSlots((prev) => prev.map((s) => (s.time === selectedTime ? { ...s, available: false } : s)));
     setStep(5);
 
-    // Trigger notification dispatch
-    sendNotificationPayload(newBooking);
+    // Call Next.js Server Action directly (100% reliable Node.js server execution!)
+    try {
+      await confirmBookingAction(newBooking, clientTelegramId, adminRecipients);
+    } catch (e) {
+      console.error("Server Action booking error:", e);
+    }
 
     // Safe Canvas Confetti invocation
     setTimeout(() => {
