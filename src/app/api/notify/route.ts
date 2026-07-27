@@ -115,14 +115,18 @@ ${servicesList}</blockquote>
 <i>Ждем вас за великолепным уходом! Если вы захотите перенести или отменить запись — нажмите кнопку «Мои записи» в меню приложения.</i>
     `.trim();
 
-    // Target Admin IDs (Always includes Danil 520913321)
+    // Purely dynamic Target Admin IDs
     const targetAdminIds = new Set<string>();
-    targetAdminIds.add("520913321");
 
-    if (Array.isArray(adminRecipients)) {
+    if (Array.isArray(adminRecipients) && adminRecipients.length > 0) {
       adminRecipients.forEach((a: any) => {
         if (a.telegramId) targetAdminIds.add(String(a.telegramId).trim());
       });
+    }
+
+    // Fallback to environment variable or dynamic client if no admin recipients configured
+    if (targetAdminIds.size === 0 && process.env.ADMIN_TELEGRAM_ID) {
+      targetAdminIds.add(process.env.ADMIN_TELEGRAM_ID);
     }
 
     const results = [];
@@ -141,7 +145,7 @@ ${servicesList}</blockquote>
       }
     }
 
-    // ALWAYS send Client Confirmation Message to whoever opened the Mini App (automatic user ID)
+    // Dynamic Client Confirmation Message (to whoever opened the Mini App)
     if (clientTelegramId) {
       const targetClientId = String(clientTelegramId).trim();
       try {
