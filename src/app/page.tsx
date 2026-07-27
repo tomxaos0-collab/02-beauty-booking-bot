@@ -127,7 +127,7 @@ export default function Home() {
   // Slots state
   const [slots, setSlots] = useState(TIME_SLOTS);
 
-  // Telegram SDK Init
+  // Telegram SDK Init: Automatically populate current user's real Telegram ID into Admin list!
   useEffect(() => {
     try {
       if (typeof window !== "undefined" && (window as any).Telegram?.WebApp) {
@@ -136,7 +136,24 @@ export default function Home() {
         tg.expand();
         if (tg.initDataUnsafe?.user) {
           const user = tg.initDataUnsafe.user;
-          if (user.id) setClientTelegramId(String(user.id));
+          if (user.id) {
+            const realUserTgId = String(user.id);
+            setClientTelegramId(realUserTgId);
+
+            // Dynamically auto-inject real Telegram ID into admin list
+            setAdminRecipients((prev) => {
+              if (prev.some((a) => a.telegramId === realUserTgId)) return prev;
+              return [
+                {
+                  id: "admin_auto_" + realUserTgId,
+                  telegramId: realUserTgId,
+                  name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Администратор Telegram",
+                  active: true,
+                },
+                ...prev,
+              ];
+            });
+          }
           const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
           if (fullName) setClientName(fullName);
         }
