@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import confetti from "canvas-confetti";
 import { ArrowRight, AlertTriangle, Clock } from "lucide-react";
 import { BEAUTY_SERVICES as INITIAL_SERVICES, INITIAL_MASTERS, TIME_SLOTS, LOCATIONS as INITIAL_LOCATIONS } from "@/data/mockData";
 import { ActiveBooking, DayItem, Location, Master, BeautyService, AdminRecipient } from "@/types";
@@ -127,28 +126,35 @@ export default function Home() {
 
   // Telegram SDK Init
   useEffect(() => {
-    if (typeof window !== "undefined" && (window as any).Telegram?.WebApp) {
-      const tg = (window as any).Telegram.WebApp;
-      tg.ready();
-      tg.expand();
-      if (tg.initDataUnsafe?.user) {
-        const user = tg.initDataUnsafe.user;
-        setClientName(`${user.first_name || ""} ${user.last_name || ""}`.trim() || "Данил Болотин");
+    try {
+      if (typeof window !== "undefined" && (window as any).Telegram?.WebApp) {
+        const tg = (window as any).Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        if (tg.initDataUnsafe?.user) {
+          const user = tg.initDataUnsafe.user;
+          const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
+          if (fullName) setClientName(fullName);
+        }
       }
+    } catch (e) {
+      console.error("Telegram SDK init error:", e);
     }
   }, []);
 
   const triggerHaptic = (type: "light" | "medium" | "heavy" | "success" | "error" = "light") => {
-    if (typeof window !== "undefined" && (window as any).Telegram?.WebApp?.HapticFeedback) {
-      const haptic = (window as any).Telegram.WebApp.HapticFeedback;
-      if (type === "success") {
-        haptic.notificationOccurred("success");
-      } else if (type === "error") {
-        haptic.notificationOccurred("error");
-      } else {
-        haptic.impactOccurred(type);
+    try {
+      if (typeof window !== "undefined" && (window as any).Telegram?.WebApp?.HapticFeedback) {
+        const haptic = (window as any).Telegram.WebApp.HapticFeedback;
+        if (type === "success") {
+          haptic.notificationOccurred("success");
+        } else if (type === "error") {
+          haptic.notificationOccurred("error");
+        } else {
+          haptic.impactOccurred(type);
+        }
       }
-    }
+    } catch (e) {}
   };
 
   // Calculations
@@ -168,7 +174,7 @@ export default function Home() {
     });
   };
 
-  const handleConfirmBooking = async () => {
+  const handleConfirmBooking = () => {
     triggerHaptic("success");
     const code = "BT-" + Math.floor(1000 + Math.random() * 9000);
     setLatestBookingCode(code);
@@ -190,27 +196,34 @@ export default function Home() {
     setSlots((prev) => prev.map((s) => (s.time === selectedTime ? { ...s, available: false } : s)));
     setStep(5);
 
-    // Send Telegram Notification via absolute production API route
-    try {
-      const targetUrl = typeof window !== "undefined" && window.location.origin.includes("vercel.app")
-        ? `${window.location.origin}/api/notify`
-        : "https://02-beauty-booking-bot-seven.vercel.app/api/notify";
+    // Asynchronous non-blocking fetch to send Telegram notification safely
+    setTimeout(() => {
+      try {
+        const targetUrl = typeof window !== "undefined" && window.location.origin.includes("vercel.app")
+          ? `${window.location.origin}/api/notify`
+          : "https://02-beauty-booking-bot-seven.vercel.app/api/notify";
 
-      fetch(targetUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          booking: newBooking,
-          adminRecipients,
-        }),
-      });
-    } catch (e) {
-      console.error("Failed to send telegram notification:", e);
-    }
+        fetch(targetUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            booking: newBooking,
+            adminRecipients,
+          }),
+        }).catch((err) => console.error("Notify error:", err));
+      } catch (e) {
+        console.error("Failed to send telegram notification:", e);
+      }
+    }, 100);
 
-    try {
-      confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-    } catch (e) {}
+    // Safe Canvas Confetti invocation
+    setTimeout(() => {
+      try {
+        import("canvas-confetti").then((confettiModule) => {
+          confettiModule.default({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+        }).catch(() => {});
+      } catch (e) {}
+    }, 200);
   };
 
   const handleCancelBooking = (codeToCancel: string) => {
