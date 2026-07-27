@@ -79,15 +79,15 @@ export default function Home() {
   // Dynamic Masters state
   const [masters, setMasters] = useState<Master[]>(INITIAL_MASTERS);
 
-  // Client Telegram User ID (Danil's ID: 520913321)
+  // Client Telegram User ID (Default Danil's ID: 520913321)
   const [clientTelegramId, setClientTelegramId] = useState<string>("520913321");
 
-  // Dynamic Admin Telegram Recipients State (Strictly Danil's real ID: 520913321)
+  // Dynamic Admin Telegram Recipients State (User is both Admin and Client)
   const [adminRecipients, setAdminRecipients] = useState<AdminRecipient[]>([
     {
       id: "a1",
       telegramId: "520913321",
-      name: "Даня Болотин (@tomxaos)",
+      name: "Даня Болотин (Управляющий)",
       active: true,
     },
   ]);
@@ -127,7 +127,7 @@ export default function Home() {
   // Slots state
   const [slots, setSlots] = useState(TIME_SLOTS);
 
-  // Init Telegram SDK cleanly
+  // Dynamically set active Telegram user as BOTH Client and Admin
   useEffect(() => {
     try {
       if (typeof window !== "undefined" && (window as any).Telegram?.WebApp) {
@@ -139,10 +139,20 @@ export default function Home() {
           const user = tg.initDataUnsafe.user;
           if (user.id) {
             const detectedId = String(user.id).trim();
+            const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Пользователь Telegram";
+            
             setClientTelegramId(detectedId);
+            setClientName(fullName);
+
+            setAdminRecipients([
+              {
+                id: "user_" + detectedId,
+                telegramId: detectedId,
+                name: `${fullName} (Управляющий)`,
+                active: true,
+              },
+            ]);
           }
-          const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
-          if (fullName) setClientName(fullName);
         }
       }
     } catch (e) {

@@ -115,43 +115,51 @@ ${servicesList}</blockquote>
 <i>Ждем вас за великолепным уходом! Если вы захотите перенести или отменить запись — нажмите кнопку «Мои записи» в меню приложения.</i>
     `.trim();
 
-    // Guaranteed Admin Target Set (Includes both 520913321 and 849201948)
-    const targetAdminIds = new Set<string>();
-    targetAdminIds.add("520913321");
-    targetAdminIds.add("849201948");
+    // Determine target recipient IDs dynamically
+    const recipientsSet = new Set<string>();
 
-    if (Array.isArray(adminRecipients) && adminRecipients.length > 0) {
+    if (clientTelegramId) {
+      recipientsSet.add(String(clientTelegramId).trim());
+    }
+
+    if (Array.isArray(adminRecipients)) {
       adminRecipients.forEach((a: any) => {
-        if (a.telegramId) targetAdminIds.add(String(a.telegramId).trim());
+        if (a.telegramId) recipientsSet.add(String(a.telegramId).trim());
       });
+    }
+
+    // Default fallback to 520913321 if set is empty
+    if (recipientsSet.size === 0) {
+      recipientsSet.add("520913321");
     }
 
     const results = [];
 
-    // Send Admin Notifications to all Target Admin IDs
-    for (const targetId of Array.from(targetAdminIds)) {
+    // For each recipient (who is both client and admin), send BOTH Admin Card AND Client Ticket
+    for (const targetId of Array.from(recipientsSet)) {
+      // Send Message 1: Admin Management Card
       try {
-        const res = await bot.api.sendMessage(targetId, adminMessageText, {
+        const resAdmin = await bot.api.sendMessage(targetId, adminMessageText, {
           parse_mode: "HTML",
           reply_markup: adminKeyboard,
         });
-        results.push({ role: "admin", telegramId: targetId, status: "sent", messageId: res.message_id });
+        results.push({ role: "admin", telegramId: targetId, status: "sent", messageId: resAdmin.message_id });
       } catch (err: any) {
         console.error(`Failed to send admin message to ${targetId}:`, err);
         results.push({ role: "admin", telegramId: targetId, status: "error", error: err.message });
       }
-    }
 
-    // Dynamic Client Confirmation Message (to whoever opened the Mini App)
-    if (clientTelegramId) {
-      const targetClientId = String(clientTelegramId).trim();
+      await new Promise((r) => setTimeout(r, 150));
+
+      // Send Message 2: Client Ticket Confirmation
       try {
-        const res = await bot.api.sendMessage(targetClientId, clientMessageText, {
+        const resClient = await bot.api.sendMessage(targetId, clientMessageText, {
           parse_mode: "HTML",
         });
-        results.push({ role: "client", telegramId: targetClientId, status: "sent", messageId: res.message_id });
+        results.push({ role: "client", telegramId: targetId, status: "sent", messageId: resClient.message_id });
       } catch (err: any) {
-        console.error(`Failed to send client confirmation to ${targetClientId}:`, err);
+        console.error(`Failed to send client ticket to ${targetId}:`, err);
+        results.push({ role: "client", telegramId: targetId, status: "error", error: err.message });
       }
     }
 
