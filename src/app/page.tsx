@@ -82,7 +82,7 @@ export default function Home() {
   // Client Telegram User ID
   const [clientTelegramId, setClientTelegramId] = useState<string>("520913321");
 
-  // Dynamic Admin Telegram Recipients State (Only Danil's real ID: 520913321)
+  // Dynamic Admin Telegram Recipients State: STRICTLY Danil's Real Telegram ID 520913321
   const [adminRecipients, setAdminRecipients] = useState<AdminRecipient[]>([
     {
       id: "a1",
@@ -127,39 +127,20 @@ export default function Home() {
   // Slots state
   const [slots, setSlots] = useState(TIME_SLOTS);
 
-  // Clear stale browser storage on mount & init Telegram SDK
+  // Init Telegram SDK cleanly without overwriting adminRecipients
   useEffect(() => {
     try {
-      if (typeof window !== "undefined") {
-        // Clear any old cached admin state from previous sessions
-        try {
-          window.localStorage.removeItem("adminRecipients");
-          window.localStorage.removeItem("beauty_admin_recipients");
-        } catch (e) {}
-
-        if ((window as any).Telegram?.WebApp) {
-          const tg = (window as any).Telegram.WebApp;
-          tg.ready();
-          tg.expand();
-          if (tg.initDataUnsafe?.user) {
-            const user = tg.initDataUnsafe.user;
-            if (user.id) {
-              const realUserTgId = String(user.id);
-              setClientTelegramId(realUserTgId);
-
-              // Force set admin recipient list to strictly contain the real ID
-              setAdminRecipients([
-                {
-                  id: "admin_auto_" + realUserTgId,
-                  telegramId: realUserTgId,
-                  name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Данил Болотин (Управляющий)",
-                  active: true,
-                },
-              ]);
-            }
-            const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
-            if (fullName) setClientName(fullName);
+      if (typeof window !== "undefined" && (window as any).Telegram?.WebApp) {
+        const tg = (window as any).Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        if (tg.initDataUnsafe?.user) {
+          const user = tg.initDataUnsafe.user;
+          if (user.id) {
+            setClientTelegramId(String(user.id));
           }
+          const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
+          if (fullName) setClientName(fullName);
         }
       }
     } catch (e) {
@@ -306,7 +287,7 @@ export default function Home() {
 
   const handleAddMaster = (newMaster: Master) => {
     triggerHaptic("success");
-    setMasters((prev) => [newMaster, ...prev]);
+    setMasters((prev) => [...prev, newMaster]);
   };
 
   // Admin Actions for Locations & Brand Name
