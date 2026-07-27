@@ -8,6 +8,12 @@
     "start": "next start -p 3002",
     "lint": "eslint ."
   },
+  "overrides": {
+    "@twa-dev/sdk": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
+  },
   "dependencies": {
     "@twa-dev/sdk": "^7.0.0",
     "canvas-confetti": "^1.9.4",
