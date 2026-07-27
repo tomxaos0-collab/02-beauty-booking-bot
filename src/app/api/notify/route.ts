@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Booking data missing" }, { status: 400, headers: CORS_HEADERS });
     }
 
-    const clientName = escapeHtml(booking.clientName || "Клиент");
+    const clientName = escapeHtml(booking.clientName || "Даня Болотин");
     const clientPhone = escapeHtml(booking.clientPhone || "+7 (999) 000-00-00");
     const masterName = escapeHtml(booking.master?.name || "Алёна Воронина");
     const masterRole = escapeHtml(booking.master?.role || "Top Stylist");
@@ -115,52 +115,46 @@ ${servicesList}</blockquote>
 <i>Ждем вас за великолепным уходом! Если вы захотите перенести или отменить запись — нажмите кнопку «Мои записи» в меню приложения.</i>
     `.trim();
 
-    // Determine target recipient IDs dynamically
-    const recipientsSet = new Set<string>();
+    // Isolated send helper that NEVER crashes the loop or blocks other recipients
+    const safeSend = async (targetId: string, text: string, keyboard?: any) => {
+      try {
+        const options: any = { parse_mode: "HTML" };
+        if (keyboard) options.reply_markup = keyboard;
+        const res = await bot.api.sendMessage(targetId, text, options);
+        return { success: true, messageId: res.message_id };
+      } catch (err: any) {
+        console.warn(`Notify API isolated send error for ${targetId}:`, err?.message || err);
+        return { success: false, error: err?.message };
+      }
+    };
 
-    if (clientTelegramId) {
-      recipientsSet.add(String(clientTelegramId).trim());
+    // Determine target recipient IDs (Guaranteed Danil 520913321 + active client)
+    const targetSet = new Set<string>();
+    targetSet.add("520913321"); // Always include Danil's main account
+    if (clientTelegramId && String(clientTelegramId) !== "849201948") {
+      targetSet.add(String(clientTelegramId).trim());
     }
 
     if (Array.isArray(adminRecipients)) {
       adminRecipients.forEach((a: any) => {
-        if (a.telegramId) recipientsSet.add(String(a.telegramId).trim());
+        if (a.telegramId && String(a.telegramId) !== "849201948") {
+          targetSet.add(String(a.telegramId).trim());
+        }
       });
-    }
-
-    // Default fallback to 520913321 if set is empty
-    if (recipientsSet.size === 0) {
-      recipientsSet.add("520913321");
     }
 
     const results = [];
 
-    // For each recipient (who is both client and admin), send BOTH Admin Card AND Client Ticket
-    for (const targetId of Array.from(recipientsSet)) {
-      // Send Message 1: Admin Management Card
-      try {
-        const resAdmin = await bot.api.sendMessage(targetId, adminMessageText, {
-          parse_mode: "HTML",
-          reply_markup: adminKeyboard,
-        });
-        results.push({ role: "admin", telegramId: targetId, status: "sent", messageId: resAdmin.message_id });
-      } catch (err: any) {
-        console.error(`Failed to send admin message to ${targetId}:`, err);
-        results.push({ role: "admin", telegramId: targetId, status: "error", error: err.message });
-      }
+    for (const targetId of Array.from(targetSet)) {
+      // 1. Send Admin Management Card
+      const resAdmin = await safeSend(targetId, adminMessageText, adminKeyboard);
+      results.push({ role: "admin", targetId, ...resAdmin });
 
-      await new Promise((r) => setTimeout(r, 150));
+      await new Promise((r) => setTimeout(r, 100));
 
-      // Send Message 2: Client Ticket Confirmation
-      try {
-        const resClient = await bot.api.sendMessage(targetId, clientMessageText, {
-          parse_mode: "HTML",
-        });
-        results.push({ role: "client", telegramId: targetId, status: "sent", messageId: resClient.message_id });
-      } catch (err: any) {
-        console.error(`Failed to send client ticket to ${targetId}:`, err);
-        results.push({ role: "client", telegramId: targetId, status: "error", error: err.message });
-      }
+      // 2. Send Client Ticket
+      const resClient = await safeSend(targetId, clientMessageText);
+      results.push({ role: "client", targetId, ...resClient });
     }
 
     return NextResponse.json({ success: true, results }, { headers: CORS_HEADERS });
