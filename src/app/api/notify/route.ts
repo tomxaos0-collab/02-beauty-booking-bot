@@ -32,23 +32,24 @@ ${servicesList}
 💳 <b>Итого к оплате:</b> <b>${booking.totalPrice} ₽</b>
     `.trim();
 
-    // Send notifications to all active admin Telegram IDs
-    const recipients = adminRecipients || [{ telegramId: "849201948" }];
-    const sendPromises = recipients.map(async (admin: any) => {
+    const recipients = adminRecipients || [];
+    const results = [];
+
+    for (const admin of recipients) {
       if (admin.telegramId) {
         try {
-          await bot.api.sendMessage(admin.telegramId, messageText, {
+          const res = await bot.api.sendMessage(admin.telegramId, messageText, {
             parse_mode: "HTML",
           });
-        } catch (err) {
-          console.error(`Failed to send Telegram message to ${admin.telegramId}:`, err);
+          results.push({ telegramId: admin.telegramId, status: "sent", messageId: res.message_id });
+        } catch (err: any) {
+          console.error(`Failed to send message to ${admin.telegramId}:`, err);
+          results.push({ telegramId: admin.telegramId, status: "error", error: err.message });
         }
       }
-    });
+    }
 
-    await Promise.all(sendPromises);
-
-    return NextResponse.json({ success: true, message: "Notifications sent successfully" });
+    return NextResponse.json({ success: true, results });
   } catch (error: any) {
     console.error("Error in notify API:", error);
     return NextResponse.json({ error: error.message || "Failed to notify" }, { status: 500 });
