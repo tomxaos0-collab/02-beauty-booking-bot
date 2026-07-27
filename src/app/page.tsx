@@ -79,15 +79,15 @@ export default function Home() {
   // Dynamic Masters state
   const [masters, setMasters] = useState<Master[]>(INITIAL_MASTERS);
 
-  // Client Telegram User ID (Default Danil's ID: 520913321)
+  // Client Telegram User ID (Danil's ID: 520913321)
   const [clientTelegramId, setClientTelegramId] = useState<string>("520913321");
 
-  // Dynamic Admin Telegram Recipients State (Default Danil's ID: 520913321)
+  // Dynamic Admin Telegram Recipients State (Strictly Danil's real ID: 520913321)
   const [adminRecipients, setAdminRecipients] = useState<AdminRecipient[]>([
     {
       id: "a1",
       telegramId: "520913321",
-      name: "Данил Болотин (Управляющий)",
+      name: "Даня Болотин (@tomxaos)",
       active: true,
     },
   ]);
@@ -114,7 +114,7 @@ export default function Home() {
   const [selectedMaster, setSelectedMaster] = useState<Master>(INITIAL_MASTERS[0]);
   const [selectedDayItem, setSelectedDayItem] = useState<DayItem>(daysList[0]);
   const [selectedTime, setSelectedTime] = useState<string>("10:00");
-  const [clientName, setClientName] = useState<string>("Данил Болотин");
+  const [clientName, setClientName] = useState<string>("Даня Болотин");
   const [clientPhone, setClientPhone] = useState<string>("+7 (999) 000-00-00");
   const [latestBookingCode, setLatestBookingCode] = useState<string>("");
 
@@ -127,7 +127,7 @@ export default function Home() {
   // Slots state
   const [slots, setSlots] = useState(TIME_SLOTS);
 
-  // Telegram SDK Init: Safely append secondary tester IDs without overwriting primary ID 520913321
+  // Init Telegram SDK cleanly
   useEffect(() => {
     try {
       if (typeof window !== "undefined" && (window as any).Telegram?.WebApp) {
@@ -140,21 +140,6 @@ export default function Home() {
           if (user.id) {
             const detectedId = String(user.id).trim();
             setClientTelegramId(detectedId);
-
-            if (detectedId !== "520913321") {
-              setAdminRecipients((prev) => {
-                if (prev.some((a) => a.telegramId === detectedId)) return prev;
-                return [
-                  ...prev,
-                  {
-                    id: "user_" + detectedId,
-                    telegramId: detectedId,
-                    name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Тестировщик Telegram",
-                    active: true,
-                  },
-                ];
-              });
-            }
           }
           const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
           if (fullName) setClientName(fullName);
