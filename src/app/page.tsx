@@ -79,21 +79,15 @@ export default function Home() {
   // Dynamic Masters state
   const [masters, setMasters] = useState<Master[]>(INITIAL_MASTERS);
 
-  // Client Telegram User ID
+  // Client Telegram User ID (Default 520913321)
   const [clientTelegramId, setClientTelegramId] = useState<string>("520913321");
 
-  // Dynamic Admin Telegram Recipients State: Default both 520913321 & 849201948
+  // Dynamic Admin Telegram Recipients State (Default ONLY 520913321)
   const [adminRecipients, setAdminRecipients] = useState<AdminRecipient[]>([
     {
       id: "a1",
       telegramId: "520913321",
-      name: "Данил Болотин (Главный Управляющий)",
-      active: true,
-    },
-    {
-      id: "a2",
-      telegramId: "849201948",
-      name: "Данил Болотин (Telegram Desktop)",
+      name: "Данил Болотин (Управляющий)",
       active: true,
     },
   ]);
@@ -133,20 +127,33 @@ export default function Home() {
   // Slots state
   const [slots, setSlots] = useState(TIME_SLOTS);
 
-  // Init Telegram SDK
+  // Dynamically update user ID from Telegram SDK when loaded
   useEffect(() => {
     try {
       if (typeof window !== "undefined" && (window as any).Telegram?.WebApp) {
         const tg = (window as any).Telegram.WebApp;
         tg.ready();
         tg.expand();
+        
         if (tg.initDataUnsafe?.user) {
           const user = tg.initDataUnsafe.user;
           if (user.id) {
-            setClientTelegramId(String(user.id));
+            const detectedId = String(user.id).trim();
+            const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Пользователь Telegram";
+            
+            setClientTelegramId(detectedId);
+            setClientName(fullName);
+
+            // Update adminRecipients dynamically to match the current Telegram user
+            setAdminRecipients([
+              {
+                id: "user_" + detectedId,
+                telegramId: detectedId,
+                name: `${fullName} (Управляющий)`,
+                active: true,
+              },
+            ]);
           }
-          const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
-          if (fullName) setClientName(fullName);
         }
       }
     } catch (e) {
