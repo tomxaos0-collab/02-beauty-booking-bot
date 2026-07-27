@@ -80,11 +80,11 @@ export default function Home() {
   // Dynamic Masters state
   const [masters, setMasters] = useState<Master[]>(INITIAL_MASTERS);
 
-  // Dynamic Admin Telegram Recipients State
+  // Dynamic Admin Telegram Recipients State (User's real ID: 520913321)
   const [adminRecipients, setAdminRecipients] = useState<AdminRecipient[]>([
     {
       id: "a1",
-      telegramId: "849201948",
+      telegramId: "520913321",
       name: "Данил Болотин (Управляющий)",
       active: true,
     },
@@ -190,7 +190,7 @@ export default function Home() {
     setSlots((prev) => prev.map((s) => (s.time === selectedTime ? { ...s, available: false } : s)));
     setStep(5);
 
-    // Send Telegram Notification via API route
+    // Send Telegram Notification via API route to 520913321
     try {
       fetch("/api/notify", {
         method: "POST",

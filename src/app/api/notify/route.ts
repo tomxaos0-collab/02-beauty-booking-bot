@@ -32,20 +32,23 @@ ${servicesList}
 💳 <b>Итого к оплате:</b> <b>${booking.totalPrice} ₽</b>
     `.trim();
 
-    const recipients = adminRecipients || [];
+    // Default recipients set to user's real Telegram ID 520913321
+    const recipients = (adminRecipients && adminRecipients.length > 0)
+      ? adminRecipients
+      : [{ telegramId: "520913321", name: "Данил Болотин" }];
+
     const results = [];
 
     for (const admin of recipients) {
-      if (admin.telegramId) {
-        try {
-          const res = await bot.api.sendMessage(admin.telegramId, messageText, {
-            parse_mode: "HTML",
-          });
-          results.push({ telegramId: admin.telegramId, status: "sent", messageId: res.message_id });
-        } catch (err: any) {
-          console.error(`Failed to send message to ${admin.telegramId}:`, err);
-          results.push({ telegramId: admin.telegramId, status: "error", error: err.message });
-        }
+      const targetId = admin.telegramId || "520913321";
+      try {
+        const res = await bot.api.sendMessage(targetId, messageText, {
+          parse_mode: "HTML",
+        });
+        results.push({ telegramId: targetId, status: "sent", messageId: res.message_id });
+      } catch (err: any) {
+        console.error(`Failed to send message to ${targetId}:`, err);
+        results.push({ telegramId: targetId, status: "error", error: err.message });
       }
     }
 
