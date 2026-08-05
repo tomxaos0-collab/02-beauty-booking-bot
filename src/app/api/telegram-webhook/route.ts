@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { Bot } from "grammy";
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "8963823447:AAGAT--TJPHYZSfsvrGnt3CRDAWQXdMABJ8";
-const bot = new Bot(BOT_TOKEN);
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
+const bot = new Bot(BOT_TOKEN || "INVALID_TOKEN_REVOKED");
 
 export async function POST(request: Request) {
   try {

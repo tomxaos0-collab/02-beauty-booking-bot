@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { Bot, InlineKeyboard } from "grammy";
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "8963823447:AAGAT--TJPHYZSfsvrGnt3CRDAWQXdMABJ8";
-const bot = new Bot(BOT_TOKEN);
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
+const bot = new Bot(BOT_TOKEN || "INVALID_TOKEN_REVOKED");
 
 // Automatically set webhook for Telegram Bot API
 const WEBHOOK_URL = "https://02-beauty-booking-bot-seven.vercel.app/api/telegram-webhook";
